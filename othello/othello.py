@@ -173,13 +173,16 @@ class Board:
 		p1_cell_count =  len( self.get_owned_cells(self.P1)) 
 		p2_cell_count = len( self.get_owned_cells(self.P2))
 		has_empty = False
-		i,j = (0,0)
+		i = 0
 		# try to find any empty cell
 		while not has_empty and i < self.DIMEN:
-			while  not has_empty and j < self.DIMEN:
-				has_empty = (self.grid[i][j].owner == self.P0) 
+			j =0
+			while not has_empty and j < self.DIMEN:
+				if self.grid[i][j].owner == self.P0:
+					has_empty = True
 				j+=1
 			i+=1
+
 		# if player has no cells then they lose!
 		if p1_cell_count <= 0 :
 			winner = self.P2
@@ -187,24 +190,19 @@ class Board:
 			winner = self.P1
 		# if the board has no empty, pick winner by number of owned cells
 		elif not has_empty:
-			print("EMPTY BOARD!")
+			print("FULL BOARD!")
 			if p1_cell_count > p2_cell_count:
 				winner = self.P1  
 			elif p1_cell_count < p2_cell_count:
 				winner = self.P2
 			else:
 				winner = self.TIE
-
-		# if a player has no moves then the loose
+		# if both players have no moves then TIE
 		else: 
 			p1_moves =  self.get_all_moves(self.P1)
 			p2_moves = self.get_all_moves(self.P2)
 			if p1_moves == False and p2_moves == False:
 				winner = self.TIE  
-			elif p1_moves == False:
-				winner = self.P2
-			elif p2_moves == False:
-				winner = self.P1
 
 		self.winner = winner
 		return self.winner != self.P0
@@ -356,7 +354,7 @@ def main():
 	winner = None
 	pygame.init()
 	screen = pygame.display.set_mode(size)
-	pygame.display.set_caption("Quoridor")
+	pygame.display.set_caption("138 Othello/Reversi ")
 	clock = pygame.time.Clock()
 	# main while loop
 	while not exit:
