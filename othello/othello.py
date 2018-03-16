@@ -51,7 +51,11 @@ class Board:
 
 		def __repr__(self):
 			return "(" + str( self.grid_pos[0]) + ", " + str(self.grid_pos[1]) + ")"
-		
+
+		def __eq__(self, other):
+			if other:
+				return self.grid_pos == other.grid_pos		
+			return
 		def copy(self):
 			'''
 				return deepcopy of cell
@@ -285,9 +289,11 @@ class Board:
 		return moves
 		
 
-	def move(self, cell_from, cell_to):
+	def move_piece(self, move):
 		self.wait = self.WAIT_TIME
 		# flips all cells in between the line segment created by  to and from 
+		# try for each cell from owned cells		
+		cell_from, cell_to = move
 		i, j =  cell_from.grid_pos
 		fi, fj =  cell_to.grid_pos
 		di, dj = (fi-i), (fj-j)
@@ -313,9 +319,16 @@ class Board:
 			else:
 				continue_flipping  = False
 			ni, nj = ni+di, nj+dj
-		
-		# set empty cell owner 
 		cell_to.owner = cell_from.owner 
+
+	def move(self, player, cell_to):
+		'''
+		for each player move from any owned cell to destination cell
+		'''
+		moves = self.get_all_moves(player)
+		for move in moves:
+			if move[1] == cell_to:
+				self.move_piece(move)
 
 
 
@@ -372,7 +385,7 @@ def main():
 		if winner != None:
 			# handle game over prompt
 			a = None
-		# set winner
+		# set winner if game over
 		elif board.check_game_over():
 			winner = board.get_winner()
 			print("WINNER: PLAYER " +str(winner+1))
@@ -400,7 +413,7 @@ def main():
 							cell = board.get_intersecting_cell(mouse_pos)
 							if cell in potential_moves:
 								# add the piece to the cell and flip all pieces in between
-								board.move(selected_cell, cell)
+								board.move(current_player, cell)
 								current_player = board.toggle_player(current_player)
 							# unselect current piece if not selecting new piece
 							if cell and cell.owner == current_player:
@@ -412,7 +425,7 @@ def main():
 				elif current_player == ai.player:
 					move = ai.get_move()
 					if move != Board.NO_MOVES:
-						board.move(move[0],move[1])
+						board.move(current_player,move[1])
 					# update current player
 					current_player = board.toggle_player(current_player)
 		# draw
