@@ -3,6 +3,7 @@ import datetime
 import pygame,math,random
 
 
+	# ---------------------------- Board Class ------------------------------------
 class Board:
 	'''
 	Board - Represents the Othello/Reversi board as a 2D grid of cells.
@@ -24,7 +25,7 @@ class Board:
 	NO_MOVES = 3	
 	GAME_OVER = 4
 	WAIT_TIME = 5 # 5 seconds
-
+	# ---------------------------- Cell Class ------------------------------------
 	class Cell:
 		'''
 		Board - Basic components of the board
@@ -36,6 +37,7 @@ class Board:
 		HIGHLIGHT_PIECE_COLOR= [255,12,0]
 		HIGHLIGHT_CELL_COLOR = [250,250,0]
 		FRAMES = 5 # number animation frames 
+		# ---------------------------- Cell Definitions ------------------------------------
 		def __init__(self, grid_pos, screen_pos, size, owner):
 			i,j = grid_pos[0],grid_pos[1]
 			x,y = screen_pos[0],screen_pos[1]
@@ -126,7 +128,7 @@ class Board:
 			return (pos[0] > self.rect[0] and pos[0] < self.rect[0]+self.rect[2]) \
 				and (pos[1] > self.rect[1] and pos[1] < self.rect[1]+self.rect[3])
 			
-
+	# ---------------------------- Board Definitions ------------------------------------
 	def __init__(self, offset, size):
 		self.font = pygame.font.SysFont(None, 48)
 		self.offset = offset
@@ -265,13 +267,6 @@ class Board:
 					return cell
 		return None
 
-	# def get_owned_cells(self, owner):
-	# 	cells = []
-	# 	for row in self.grid:
-	# 		for cell in row:
-	# 			if cell.owner == owner:
-	# 				cells.append(cell)
-	# 	return cells
 	def get_owned_cells(self, player):
 		return list(self.pieces[player].keys())		
 
@@ -291,6 +286,7 @@ class Board:
 		i,j = cell.grid_pos
 		# get each index of the neighbor and check if the move is valid
 		neighbor = None
+
 		for di in range(-1,2):
 			for dj in range(-1,2):
 				ni, nj = i+di, j+dj
@@ -308,37 +304,42 @@ class Board:
 									search = False # reached end of board 
 								else:
 									next_cell = self.grid[ni][nj]
-									if next_cell.owner == self.PLAYER_NEITHER: # found empty cell! add this cell to moves
+									 # if found empty cell!
+									if next_cell.owner == self.PLAYER_NEITHER:
+										# add this cell to moves
+										# if next_cell does not result in surrounding opponent then valid
+										# for each neighbor of next-cell, count owned cells 		
 										moves.append(next_cell)
 										search = False
 									elif next_cell.owner == cell.owner: # not opponent, cannot jump
 										search = False
+
 									#else keep searching
 		return moves
 
-	def is_move(self, move):
-		valid = False
-		cell_from, cell_to = move
-		if cell_to.owner == self.PLAYER_NEITHER:
-			i,j = cell_from.grid_pos
-			di, dj = self.get_move_delta(move)
-			ni, nj = i+di, j+dj
-			if (ni, nj) != (i,j):
-				valid = True
-				next_cell = None
-				while valid and \
-						ni >= 0 and ni < self.DIMEN and nj >= 0 and nj < self.DIMEN:
-					next_cell = self.grid[ni][nj]
-					# if cell is owned by opponent 
-					if next_cell.owner == cell_from.owner or next_cell.owner == self.PLAYER_NEITHER: 
-						valid  = False
-					ni, nj = ni+di, nj+dj
-				# empty cell broke loop
-				if next_cell.owner == self.PLAYER_NEITHER:
-					valid = True
-				else:
-					valid = False
-		return valid
+	# def is_move(self, move):
+	# 	valid = False
+	# 	cell_from, cell_to = move
+	# 	if cell_to.owner == self.PLAYER_NEITHER:
+	# 		i,j = cell_from.grid_pos
+	# 		di, dj = self.get_move_delta(move)
+	# 		ni, nj = i+di, j+dj
+	# 		if (ni, nj) != (i,j):
+	# 			valid = True
+	# 			next_cell = None
+	# 			while valid and \
+	# 					ni >= 0 and ni < self.DIMEN and nj >= 0 and nj < self.DIMEN:
+	# 				next_cell = self.grid[ni][nj]
+	# 				# if cell is owned by opponent 
+	# 				if next_cell.owner == cell_from.owner or next_cell.owner == self.PLAYER_NEITHER: 
+	# 					valid  = False
+	# 				ni, nj = ni+di, nj+dj
+	# 			# empty cell broke loop
+	# 			if next_cell.owner == self.PLAYER_NEITHER:
+	# 				valid = True
+	# 			else:
+	# 				valid = False
+	# 	return valid
 
 	def move_piece(self, move):
 		self.wait = self.WAIT_TIME
@@ -388,7 +389,7 @@ class Board:
 			di = -1
 		if dj > 1:
 			dj = 1
-		if dj < 0:
+		elif dj < 0:
 			dj = -1
 		return (di, dj)
 
@@ -416,45 +417,50 @@ class AI:
 				move = moves[random.randint(0, len(moves)-1)]
 		return move
 
+
+# ---------------------------- Menu Class ------------------------------------
 class Menu:
 	TEXT_COLOR = [0,55,250]
-	BUTTON_COLOR = [255,127,80]
-
-	def __init__(self, pos):
-		self.pos = pos
+	BUTTON_COLOR = [255,255,2]
+	# ---------------------------- Menu Definitions ------------------------------------
+	def __init__(self, offset):
+		self.pos = offset
 		self.font_height = 56
 		self.font = pygame.font.SysFont(None, self.font_height)
-		# start button
+		# start buttons are showed at opening menu
 		self.buttons = {}
 		text = self.font.render('Start', True, self.TEXT_COLOR, self.BUTTON_COLOR)
-		pos = (pos[0]-text.get_width()//2, pos[1])
-		self.buttons['START'] = (text, pos)
+		pos = (offset[0]-text.get_width()//2, offset[1])
+		self.buttons['START'] = (text, pos, False)
+		# retry is at same location as start, but is displayed at game_over only 
+		text = self.font.render('Retry', True, self.TEXT_COLOR, self.BUTTON_COLOR)
+		pos = (offset[0]-text.get_width()//2, offset[1])
+		self.buttons['RETRY'] = (text, pos, True)
 		# all other buttons pos will be pos[0], pos[1]+i*text.get_height()
 
 	def draw(self, screen, game_over=False):
-		if not game_over:
 			keys  = list(self.buttons.keys())
 			for i in range(0, len(keys)):
-				text, pos = self.buttons[keys[i]]
-				screen.blit(text, pos )
-		else:
-			a=  None
-			#draw menu buttons to go back to start, retry
-
-	def get_intersecting_button(self, pos):
+				text, pos, is_game_over = self.buttons[keys[i]]
+				if game_over == is_game_over:
+					screen.blit(text, pos )
+		
+	def get_intersecting_button(self, pos, game_over=False):
 		keys  = list(self.buttons.keys())
 		for i in range(0, len(keys)):
-			button = self.buttons[keys[i]]
-			button_pos = button[1]
-			size = button[0].get_width(),button[0].get_height()
-			if (pos[0] > button_pos[0] and pos[0] < button_pos[0]+size[0]) \
-				and (pos[1] > button_pos[1] and pos[1] < button_pos[1]+size[1]):
-				return keys[i]
+			text, button_pos, is_game_over  = self.buttons[keys[i]]
+			size = text.get_width(),text.get_height()
+			if game_over == is_game_over:
+				if (pos[0] > button_pos[0] and pos[0] < button_pos[0]+size[0]) \
+					and (pos[1] > button_pos[1] and pos[1] < button_pos[1]+size[1]):
+					return keys[i]
+	
 		return None
 
+# ---------------------------- ScoreBoard Class ------------------------------------
 class ScoreBoard:
 	TEXT_COLOR = [0,155,250]
-	
+	# ---------------------------- ScoreBoard Definitions ------------------------------------
 	def __init__(self, pos):
 		self.font_height = 34
 		self.font = pygame.font.SysFont(None, self.font_height)
@@ -475,7 +481,8 @@ class ScoreBoard:
 
 		white_score_text = self.font.render(white_score, True,  self.TEXT_COLOR) 
 		white_score_text_pos = [gap+white_text_pos[0]+white_text.get_width(), white_text_pos[1]]
-		
+
+
 		# set score text pos to align along y axis
 		if white_score_text_pos[0] > black_score_text_pos[0]:
 			black_score_text_pos[0] = white_score_text_pos[0] 
@@ -496,7 +503,7 @@ class ScoreBoard:
 		pygame.draw.circle(screen, color, midpoint,self.radius,0)
 		pygame.draw.circle(screen, Board.Cell.HIGHLIGHT_PIECE_COLOR, midpoint,self.radius,0)
 
-
+# ---------------------------- MMain Entry Point ------------------------------------
 def main():
 	# window and board size and position settings
 	BG_COLOR = [5,5,32]
@@ -510,19 +517,22 @@ def main():
 	# game and gui state variables
 	player = None
 	selected_cell = None 
-	potential_moves = None
 	current_player = None
 	winner = None
-	start_clicked = False
 	exit = False
-	show_menu = True
-
+	draw_board =False
+	start_new_game = False
+	game_over = False
 	# setup
 	pygame.init()
 	screen = pygame.display.set_mode(size)
 	pygame.display.set_caption("Othello/Reversi ")
 	clock = pygame.time.Clock()
 	menu = Menu((size[0]//2,size[1]//2))
+	hint_font = pygame.font.SysFont(None, 34)
+	hint_text = hint_font.render('Show Hint', True, Menu.TEXT_COLOR, Menu.BUTTON_COLOR)
+	hint_button = (border, border, hint_text.get_width(),hint_text.get_height())
+	
 	# main while loop
 	while not exit:
 		mouse_clicked = False
@@ -537,19 +547,28 @@ def main():
 				mouse_clicked = True
 				mouse_pos = pygame.mouse.get_pos()
 
-		# 
+		# if new game is started reinitialize board and player vars
+		if start_new_game:
+			current_player = random.randint(Board.PLAYER_BLACK, Board.PLAYER_WHITE)
+			board = Board( offset, (size[0], size[0])  ) 
+			score_board = ScoreBoard((offset[0], offset[1]+size[0]))
+			player = Board.PLAYER_BLACK
+			ai = AI(Board.PLAYER_WHITE, board) 
+			selected_cell = None 
+			winner = None
+			show_start_menu = False
+			start_new_game = False
+
+		# clear screen
 		screen.fill(BG_COLOR)
-		if not show_menu:
+
+		# if not 
+		if draw_board:
 			if winner != None:
-				# handle game over prompt, delete board vars
-				del board; del ai; del score_board
-				a = None
-			# set winner if game over
+				game_over = True
+				# set winner if game over
 			elif board.check_game_over():
 				winner = board.get_winner()
-				print('WINNER: PLAYER %d\Black:%d\nWhite:%d\n' % \
-					(winner+1, board.get_score(board.PLAYER_BLACK),board.get_score(board.PLAYER_WHITE) ))
-
 				# display winner!
 			# make decision
 			else:
@@ -578,7 +597,6 @@ def main():
 								# unselect current piece if not selecting new piece
 								if cell and cell.owner == current_player:
 									selected_cell = cell 
-									potential_moves = board.get_moves(selected_cell)
 								else:
 									selected_cell = None
 
@@ -591,29 +609,39 @@ def main():
 			#draw board
 			board.draw(screen)
 			# if cell is celected highlight current piece, and any potential moves
+			#if draw move hints by selecting a random cell that has a move
+			screen.blit(hint_text, (hint_button[0],hint_button[1]))
+			if mouse_clicked:
+				if (mouse_pos[0] > hint_button[0] and mouse_pos[0] < hint_button[0]+hint_button[2]) \
+					and (mouse_pos[1] > hint_button[1] and mouse_pos[1] < hint_button[1]+hint_button[3]): 
+					all_moves = board.get_all_moves(current_player)
+					selected_cell = all_moves[random.randint(0, len(all_moves)-1)][0]
 			if selected_cell:
 				# highlight the piece
+				potential_moves = board.get_moves(selected_cell)
 				selected_cell.draw_highlight(screen, True)
 				for move in potential_moves:
 					move.draw_highlight(screen)
 			score_board.draw(screen,board, current_player)
 
-
-		else: #show_menu:
+		# else do not draw board
+		else: # show_start_menu:
 			if mouse_clicked: # handle menu input
 				button_id = menu.get_intersecting_button(mouse_pos)
 				# Start game ,create board variables!
 				if button_id == 'START':
-					show_menu = False
-					board = Board( offset, (size[0], size[0])  ) 
-					player = Board.PLAYER_BLACK
-					ai = AI(Board.PLAYER_WHITE, board) 
-					selected_cell = None 
-					potential_moves = []
-					current_player = random.randint(Board.PLAYER_BLACK, Board.PLAYER_WHITE)
-					score_board = ScoreBoard((offset[0], offset[1]+size[0]))
-					winner = None
+					start_new_game = True
+					draw_board = True
 			menu.draw(screen)
+		
+		if game_over: 
+			menu.draw(screen, True)
+			if mouse_clicked:
+				button = menu.get_intersecting_button(mouse_pos, True)
+				if button == 'RETRY':
+					del ai; del board; del score_board
+					start_new_game = True
+					game_over = False
 
 		pygame.display.flip()
 
