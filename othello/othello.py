@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import datetime
-import pygame,math,random
+import pygame,math,random, time
 
 
 	# ---------------------------- Board Class ------------------------------------
@@ -13,7 +13,7 @@ class Board:
 	PLAYER_NEITHER = -1 # niether player
 	PLAYER_BLACK = 0 # player one (black)
 	PLAYER_WHITE = 1 # player two (white)
-	DIMEN = 8 # dimension of the grid 8x8
+	DIMEN = 10 # dimension of the grid 8x8
 	BLACK = [0,0,0]
 	WHITE = [255,255,255]
 
@@ -24,7 +24,9 @@ class Board:
 	TIE = 2 		# TIE
 	NO_MOVES = 3	
 	GAME_OVER = 4
-	WAIT_TIME = 5 # 5 seconds
+	WAIT_TIME = 8 # 5 steps
+	BUNNY_FILE = 'bunny.png'
+
 	# ---------------------------- Cell Class ------------------------------------
 	class Cell:
 		'''
@@ -36,6 +38,8 @@ class Board:
 		# Statics for the cells
 		HIGHLIGHT_PIECE_COLOR= [255,12,0]
 		HIGHLIGHT_CELL_COLOR = [250,250,0]
+		TEXT_COLOR = [205,5,1]
+
 		FRAMES = 5 # number animation frames 
 		# ---------------------------- Cell Definitions ------------------------------------
 		def __init__(self, grid_pos, screen_pos, size, owner):
@@ -55,6 +59,11 @@ class Board:
 					self.cell_color = Board.TILE_COLOR_A
 			else:
 				self.cell_color = Board.TILE_COLOR_B
+			self.bunny = None
+			self.plus_one_frame = False # if bonus
+			self.font = pygame.font.SysFont(None, 54)
+			self.plus_one_text = self.font.render('+1', True,  self.TEXT_COLOR)
+
 
 		def __repr__(self):
 			return "(" + str( self.grid_pos[0]) + ", " + str(self.grid_pos[1]) + ")"
@@ -67,11 +76,13 @@ class Board:
 		def __hash__(self):
 			return hash(self.grid_pos )
 
+
 		def copy(self):
 			'''
 				return deepcopy of cell
 			'''
 			return Board.Cell(self.grid_pos, self.screen_pos, self.size, self.owner)
+
 
 		def draw(self, screen):
 			pygame.draw.rect(screen, self.cell_color, self.rect, 0)
@@ -79,7 +90,6 @@ class Board:
 			if self.owner != Board.PLAYER_NEITHER:
 				color = None
 				if self.frame == 0: # not currently animated
-			
 					if self.owner == Board.PLAYER_BLACK:
 						color = Board.BLACK
 					elif self.owner == Board.PLAYER_WHITE:
@@ -89,6 +99,8 @@ class Board:
 					# to simulate the piece being flipped draw an ellipse whose width decrease then increases
 					# on the increase change the color to the new owner 
 					# flips along
+					if self.bunny:
+						self.plus_one_frame = 1
 					rot = math.sin(self.frame)
 					if rot < 0:
 						rot *= -1
@@ -110,12 +122,31 @@ class Board:
 					self.frame += 1
 					self.frame %= self.FRAMES
 
+			
+			if self.bunny != None:
+				pos =  int(self.midpoint[0]-self.bunny.get_width()/2),\
+				  		int(self.midpoint[1]-self.bunny.get_height()/2)
+				screen.blit(self.bunny, pos)
+				if self.plus_one_frame > 0:
+					x,y = self.rect[0], self.rect[1]
+					w,h = self.rect[2]+self.frame*2, self.rect[3]+self.frame*2
+					screen.blit(self.plus_one_text, [x,y,w,h])
+					if self.plus_one_frame == 0:
+						self.plus_one_frame = False
+					else:
+						self.plus_one_frame += 1
+						self.plus_one_frame %= self.FRAMES
 
 		def flip(self):
 			self.frame = 1
 			# flip owner
 			self.owner = Board.toggle_player(self.owner)
 
+		def value(self):
+			if self.bunny:
+				return 2
+			else:
+				return 1  
 
 		def draw_highlight(self,screen, piece=False):
 			if piece:
@@ -134,8 +165,16 @@ class Board:
 		self.offset = offset
 		self.size = size 
 		cell_size = size[0]//self.DIMEN, size[1]//self.DIMEN
+		img_size = int(cell_size[0]*0.6), int(cell_size[1]*0.6)
+		self.img = pygame.transform.scale(pygame.image.load(self.BUNNY_FILE), img_size)
 		self.grid = []
 		self.setup_board(offset, cell_size)
+		# TODO - random ", draw as bunny 
+		# assign "bunnies" double point cells
+		random.seed(datetime.datetime.now())
+		for i in range(0,5):
+			x,y =  random.randint(0,self.DIMEN-1), random.randint(0, self.DIMEN-1) 
+			self.grid[x][y].bunny = self.img
 		self.winner = self.PLAYER_NEITHER
 		self.wait = 0 #animation waittime, after eah move made wait for animation
 
@@ -187,7 +226,10 @@ class Board:
 		return self.winner
 
 	def get_score(self, player):
-		return len(self.pieces[player].keys())
+		score = 0
+		for cell in self.pieces[player]:
+			score += cell.value()
+		return score
 
 	def check_game_over(self):
 		'''
@@ -375,6 +417,7 @@ class Board:
 		for move in moves:
 			if move[1] == cell_to:
 				self.move_piece(move)
+				cell_to.plus_one_frame = 1
 
 
 	def get_move_delta(self, move):
@@ -405,6 +448,7 @@ class AI:
 		'''
 			returns board state or potential move (cell_from, cell_to)
 		'''
+		#stall 
 		move = Board.GAME_OVER
 		if not self.board.check_game_over():
 			move = Board.NO_MOVES # does not own any cells!
